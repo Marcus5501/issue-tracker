@@ -1,7 +1,9 @@
 import { Handler } from '@netlify/functions';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
+import * as querystring from 'querystring';
 
+// Initialize Firebase Admin
 const firebaseApp = initializeApp({
   credential: cert({
     projectId: process.env.FIREBASE_PROJECT_ID,
@@ -15,10 +17,11 @@ const db = getDatabase(firebaseApp);
 
 const handler: Handler = async (event) => {
   try {
-    console.log('🔔 Payload Received:', event.body);
+    // Parse x-www-form-urlencoded
+    const bodyParams = querystring.parse(event.body || '');
+    console.log('🔔 Raw Payload:', bodyParams.payload);
 
-    const body = JSON.parse(event.body || '{}');
-    const payload = JSON.parse(body.payload);
+    const payload = JSON.parse(bodyParams.payload as string);
 
     const issueData = {
       app_name: payload.view.state.values.app_name.input.value,
@@ -28,11 +31,10 @@ const handler: Handler = async (event) => {
       created_at: Date.now()
     };
 
-    console.log('📥 Issue Data:', issueData);
+    console.log('✅ Parsed Issue:', issueData);
 
     await db.ref('issues').push(issueData);
-
-    console.log('✅ Issue saved to Firebase');
+    console.log('🔥 Issue saved to Firebase');
 
     return { statusCode: 200, body: '' };
   } catch (err) {
