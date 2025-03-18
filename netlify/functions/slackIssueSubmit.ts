@@ -35,6 +35,43 @@ const formatStatusEmoji = (status: string): string => {
   }
 };
 
+// Helper function to safely extract user information
+const extractUserInfo = (payload: any) => {
+  try {
+    // Log the structure of payload for debugging
+    console.log('Payload structure:', JSON.stringify({
+      hasUser: !!payload.user,
+      hasTeam: !!(payload.user && payload.user.team_id),
+      hasChannel: !!payload.channel,
+      view: !!(payload.view && payload.view.state && payload.view.state.values)
+    }));
+    
+    // Different payload structures based on interaction type
+    // For modal submissions
+    if (payload.view && payload.view.state) {
+      return {
+        userId: payload.user?.id || 'unknown',
+        username: payload.user?.name || 'Unknown User',
+        channelId: payload.view?.private_metadata || payload.user?.id || 'unknown'
+      };
+    }
+    
+    // For slash commands or direct interactions
+    return {
+      userId: payload.user?.id || 'unknown',
+      username: payload.user?.name || payload.user?.username || 'Unknown User',
+      channelId: payload.channel?.id || payload.channel_id || payload.user?.id || 'unknown'
+    };
+  } catch (error) {
+    console.error('Error extracting user info:', error);
+    return {
+      userId: 'unknown',
+      username: 'Unknown User',
+      channelId: 'unknown'
+    };
+  }
+};
+
 const handler: Handler = async (event) => {
   try {
     // Parse x-www-form-urlencoded
@@ -43,17 +80,20 @@ const handler: Handler = async (event) => {
 
     const payload = JSON.parse(bodyParams.payload as string);
     
-    // Get the channel_id where the command was triggered
-    const channelId = payload.user.team_id ? payload.channel.id : payload.user.id;
+    // Extract user information safely
+    const { userId, username, channelId } = extractUserInfo(payload);
     
     // Extract values from the submitted form
-    const title = payload.view.state.values.title.input.value;
-    const description = payload.view.state.values.description.input.value;
-    const status = payload.view.state.values.status.input.selected_option?.value || 'pending';
-    const priority = payload.view.state.values.priority.input.selected_option?.value || 'medium';
-    const feature = payload.view.state.values.feature.input.selected_option?.value || '';
-    const assignee = payload.view.state.values.assignee.input.value;
-    const notes = payload.view.state.values.notes?.input?.value || '';
+    const values = payload.view?.state?.values || {};
+    
+    // Safely access form values with fallbacks
+    const title = values.title?.input?.value || 'Untitled Issue';
+    const description = values.description?.input?.value || 'No description provided';
+    const status = values.status?.input?.selected_option?.value || 'pending';
+    const priority = values.priority?.input?.selected_option?.value || 'medium';
+    const feature = values.feature?.input?.selected_option?.value || 'Unspecified';
+    const assignee = values.assignee?.input?.value || 'Unassigned';
+    const notes = values.notes?.input?.value || '';
     
     // Create issue data matching the web app structure
     const issueData = {
@@ -68,8 +108,8 @@ const handler: Handler = async (event) => {
       id: Date.now().toString(), // Temporary ID that will be replaced by Firebase's key
       slackMetadata: {
         channelId,
-        userId: payload.user.id,
-        username: payload.user.username
+        userId,
+        username
       }
     };
 
@@ -139,7 +179,7 @@ const handler: Handler = async (event) => {
           elements: [
             {
               type: "mrkdwn",
-              text: `Created by ${payload.user.username} | ${new Date().toLocaleString()}`
+              text: `Created by ${username} | ${new Date().toLocaleString()}`
             }
           ]
         },

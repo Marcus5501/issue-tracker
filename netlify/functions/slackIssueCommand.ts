@@ -23,6 +23,9 @@ const COMMON_FEATURES = [
 const handler: Handler = async (event) => {
   const bodyParams = new URLSearchParams(event.body || '');
   const trigger_id = bodyParams.get('trigger_id');
+  const channel_id = bodyParams.get('channel_id');
+  
+  console.log('slackIssueCommand triggered in channel:', channel_id);
 
   const modalView = {
     trigger_id: trigger_id,
@@ -31,6 +34,7 @@ const handler: Handler = async (event) => {
       callback_id: 'issue_form_submit',
       title: { type: 'plain_text', text: 'Create New Issue' },
       submit: { type: 'plain_text', text: 'Submit' },
+      private_metadata: channel_id || '', // Lưu channel_id để sử dụng khi submit
       blocks: [
         {
           type: 'input',
@@ -146,14 +150,25 @@ const handler: Handler = async (event) => {
     }
   };
 
-  await axios.post('https://slack.com/api/views.open', modalView, {
-    headers: {
-      Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-      'Content-Type': 'application/json'
-    }
-  });
-
-  return { statusCode: 200, body: '' };
+  try {
+    await axios.post('https://slack.com/api/views.open', modalView, {
+      headers: {
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return { statusCode: 200, body: '' };
+  } catch (err) {
+    console.error('Error opening modal:', err);
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ 
+        error: 'Failed to open modal',
+        details: err.message
+      }) 
+    };
+  }
 };
 
 export { handler };
