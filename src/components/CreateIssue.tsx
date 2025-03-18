@@ -41,12 +41,14 @@ const CreateIssue: React.FC<CreateIssueProps> = ({ onCreateIssue }) => {
   });
   const [customFeature, setCustomFeature] = useState<string>('');
   const [showCustomFeature, setShowCustomFeature] = useState<boolean>(false);
+  const [followers, setFollowers] = useState<string[]>([]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Xử lý đặc biệt cho feature
-    if (name === 'feature' && value === 'custom') {
+    if (name === 'followers') {
+      setFollowers(value.split(',').map(follower => follower.trim()));
+    } else if (name === 'feature' && value === 'custom') {
       setShowCustomFeature(true);
     } else if (name === 'feature') {
       setShowCustomFeature(false);
@@ -74,7 +76,7 @@ const CreateIssue: React.FC<CreateIssueProps> = ({ onCreateIssue }) => {
     e.preventDefault();
     
     // Cập nhật feature từ custom input nếu đang hiển thị
-    let finalIssue = {...newIssue};
+    let finalIssue = {...newIssue, followers};
     if (showCustomFeature && customFeature) {
       finalIssue.feature = customFeature;
     }
@@ -210,19 +212,14 @@ const CreateIssue: React.FC<CreateIssueProps> = ({ onCreateIssue }) => {
           
           <div className="form-group">
             <label htmlFor="assignee">Assignee *</label>
-            <select
+            <input
+              type="text"
               id="assignee"
               name="assignee"
-              value={newIssue.assignee}
+              value={`@${newIssue.assignee}`}
               onChange={handleInputChange}
-              multiple
               required
-            >
-              {/* Assuming a list of team members is available */}
-              {['John Doe', 'Jane Smith', 'Mike Johnson'].map(member => (
-                <option key={member} value={member}>{member}</option>
-              ))}
-            </select>
+            />
           </div>
         </div>
         
@@ -232,6 +229,17 @@ const CreateIssue: React.FC<CreateIssueProps> = ({ onCreateIssue }) => {
             id="notes"
             name="notes"
             value={newIssue.notes}
+            onChange={handleInputChange}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="followers">Followers (comma-separated)</label>
+          <input
+            type="text"
+            id="followers"
+            name="followers"
+            value={followers.join(', ')}
             onChange={handleInputChange}
           />
         </div>
