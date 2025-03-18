@@ -35,9 +35,43 @@ const formatStatusEmoji = (status: string): string => {
 // Helper function to try joining a channel before posting
 const tryJoinChannel = async (channelId: string): Promise<boolean> => {
   try {
-    console.log(`Attempting to join channel: ${channelId}`);
+    console.log(`Checking if bot needs to join channel: ${channelId}`);
+    
+    // First check if bot is already in the channel
+    // Get bot's own ID
+    const authResponse = await axios.post('https://slack.com/api/auth.test', {}, {
+      headers: {
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!authResponse.data.ok) {
+      console.error('Failed to get bot ID:', authResponse.data.error);
+      return false;
+    }
+    
+    const botUserId = authResponse.data.user_id;
+    
+    // Check if bot is in the channel
+    try {
+      const membersResponse = await axios.get(`https://slack.com/api/conversations.members?channel=${channelId}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`
+        }
+      });
+      
+      if (membersResponse.data.ok && membersResponse.data.members.includes(botUserId)) {
+        console.log('✅ Bot is already in channel, no need to join');
+        return true;
+      }
+    } catch (error) {
+      // Continue to joining if checking fails
+      console.log('Could not check membership, will try to join:', error);
+    }
     
     // Try to join the channel using conversations.join API
+    console.log('Bot not in channel, attempting to join now');
     const joinResponse = await axios.post('https://slack.com/api/conversations.join', 
       { channel: channelId }, 
       {

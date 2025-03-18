@@ -1,6 +1,52 @@
 import { Handler } from '@netlify/functions';
 import axios from 'axios';
 
+// Helper function to check if bot is in channel
+const isBotInChannel = async (channelId: string): Promise<boolean> => {
+  try {
+    console.log(`Checking if bot is in channel: ${channelId}`);
+    
+    // First get bot's own ID using auth.test
+    const authResponse = await axios.post('https://slack.com/api/auth.test', {}, {
+      headers: {
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!authResponse.data.ok) {
+      console.error('Failed to get bot ID:', authResponse.data.error);
+      return false;
+    }
+    
+    const botUserId = authResponse.data.user_id;
+    
+    // Check if bot is in the channel
+    const membersResponse = await axios.get(`https://slack.com/api/conversations.members?channel=${channelId}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`
+      }
+    });
+    
+    if (!membersResponse.data.ok) {
+      // If error is not_in_channel or channel_not_found, it means bot is not in channel
+      if (membersResponse.data.error === 'not_in_channel' || 
+          membersResponse.data.error === 'channel_not_found') {
+        return false;
+      }
+      
+      console.error('Error checking channel members:', membersResponse.data.error);
+      return false;
+    }
+    
+    // Check if bot's ID is in members list
+    return membersResponse.data.members.includes(botUserId);
+  } catch (error) {
+    console.error('Error checking if bot is in channel:', error);
+    return false;
+  }
+};
+
 // Danh sách các tính năng phổ biến cho dropdown
 const COMMON_FEATURES = [
   'Review box',
@@ -158,17 +204,23 @@ const handler: Handler = async (event) => {
       }
     });
     
-    // Send a message to remind users to add the bot to the channel
-    await axios.post('https://slack.com/api/chat.postEphemeral', {
-      channel: channel_id,
-      user: bodyParams.get('user_id'),
-      text: "👋 *Lưu ý:* Để bot có thể gửi thông báo về issue, vui lòng đảm bảo đã *thêm bot vào channel này* nếu chưa làm điều đó. Bạn có thể thêm bot bằng cách gõ `@[tên bot]` và chọn 'Add to Channel'."
-    }, {
-      headers: {
-        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    // Check if bot is already in the channel
+    const botInChannel = await isBotInChannel(channel_id || '');
+    
+    // Only send the reminder if bot is not in channel
+    if (!botInChannel) {
+      // Send a message to remind users to add the bot to the channel
+      await axios.post('https://slack.com/api/chat.postEphemeral', {
+        channel: channel_id,
+        user: bodyParams.get('user_id'),
+        text: "👋 *Lưu ý:* Để bot có thể gửi thông báo về issue, vui lòng đảm bảo đã *thêm bot vào channel này* nếu chưa làm điều đó. Bạn có thể thêm bot bằng cách gõ `@[tên bot]` và chọn 'Add to Channel'."
+      }, {
+        headers: {
+          Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
     
     return { statusCode: 200, body: '' };
   } catch (err) {
