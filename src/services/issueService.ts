@@ -311,6 +311,19 @@ export const updateIssue = async (issue: Issue): Promise<boolean> => {
       return false;
     }
     
+    // Lấy dữ liệu issue hiện tại để kiểm tra thay đổi trạng thái
+    let currentIssue: Issue | null = null;
+    try {
+      const cleanPathForGet = sanitizePath(`${ISSUES_PATH}/${id}`);
+      const issueRefForGet = ref(rtdb, cleanPathForGet);
+      const snapshot = await get(issueRefForGet);
+      if (snapshot.exists()) {
+        currentIssue = snapshot.val();
+      }
+    } catch (error) {
+      console.warn('Không thể lấy dữ liệu issue hiện tại:', error);
+    }
+    
     // Kiểm tra kết nối
     const isConnected = await checkFirebaseConnection();
     if (!isConnected) {
@@ -335,6 +348,35 @@ export const updateIssue = async (issue: Issue): Promise<boolean> => {
     
     await update(issueRef, updates);
     console.log(`Issue ${id} đã được cập nhật`);
+    
+    // Kiểm tra nếu status thay đổi, gọi đến Netlify function để gửi thông báo
+    if (currentIssue && currentIssue.status !== updates.status) {
+      try {
+        const netlifyFunctionUrl = '/.netlify/functions/issueStatusListener';
+        const notificationData = {
+          issueId: id,
+          oldStatus: currentIssue.status,
+          newStatus: updates.status
+        };
+        
+        // Gửi request đến Netlify function
+        const response = await fetch(netlifyFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(notificationData)
+        });
+        
+        if (!response.ok) {
+          console.warn('Không thể gửi thông báo Slack:', await response.text());
+        }
+      } catch (notifyError) {
+        console.error('Lỗi khi gửi thông báo thay đổi trạng thái:', notifyError);
+        // Tiếp tục xử lý, không ảnh hưởng đến việc cập nhật issue
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error('Error updating issue:', error);

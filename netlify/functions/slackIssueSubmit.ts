@@ -2,6 +2,7 @@ import { Handler } from '@netlify/functions';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
 import * as querystring from 'querystring';
+import axios from 'axios';
 
 // Initialize Firebase Admin
 const firebaseApp = initializeApp({
@@ -15,6 +16,25 @@ const firebaseApp = initializeApp({
 
 const db = getDatabase(firebaseApp);
 
+// Helper function to format priority and status for display
+const formatPriorityEmoji = (priority: string): string => {
+  switch (priority) {
+    case 'high': return '🔴';
+    case 'medium': return '🟠';
+    case 'low': return '🟢';
+    default: return '⚪';
+  }
+};
+
+const formatStatusEmoji = (status: string): string => {
+  switch (status) {
+    case 'pending': return '⏱️';
+    case 'doing': return '🔄';
+    case 'resolved': return '✅';
+    default: return '❓';
+  }
+};
+
 const handler: Handler = async (event) => {
   try {
     // Parse x-www-form-urlencoded
@@ -22,6 +42,9 @@ const handler: Handler = async (event) => {
     console.log('🔔 Raw Payload:', bodyParams.payload);
 
     const payload = JSON.parse(bodyParams.payload as string);
+    
+    // Get the channel_id where the command was triggered
+    const channelId = payload.user.team_id ? payload.channel.id : payload.user.id;
     
     // Extract values from the submitted form
     const title = payload.view.state.values.title.input.value;
@@ -42,7 +65,12 @@ const handler: Handler = async (event) => {
       assignee,
       notes,
       createdAt: new Date().toISOString(),
-      id: Date.now().toString() // Temporary ID that will be replaced by Firebase's key
+      id: Date.now().toString(), // Temporary ID that will be replaced by Firebase's key
+      slackMetadata: {
+        channelId,
+        userId: payload.user.id,
+        username: payload.user.username
+      }
     };
 
     console.log('✅ Parsed Issue:', issueData);
@@ -50,10 +78,93 @@ const handler: Handler = async (event) => {
     // Get a reference to the issues node and push new data
     const issueRef = await db.ref('issues').push(issueData);
     
-    // Update the id field with Firebase's generated key to match web app structure
-    await db.ref(`issues/${issueRef.key}`).update({ id: issueRef.key });
+    // Get the generated Firebase key
+    const issueId = issueRef.key;
     
-    console.log('🔥 Issue saved to Firebase with ID:', issueRef.key);
+    // Update the id field with Firebase's generated key to match web app structure
+    await db.ref(`issues/${issueId}`).update({ id: issueId });
+    
+    console.log('🔥 Issue saved to Firebase with ID:', issueId);
+
+    // Send a message to the Slack channel with issue details
+    const message = {
+      channel: channelId,
+      text: `*New Issue Created:* #${issueId}`,
+      blocks: [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: `🔔 New Issue #${issueId}`,
+            emoji: true
+          }
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*${title}*`
+          }
+        },
+        {
+          type: "section",
+          fields: [
+            {
+              type: "mrkdwn",
+              text: `*Status:* ${formatStatusEmoji(status)} ${status.charAt(0).toUpperCase() + status.slice(1)}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Priority:* ${formatPriorityEmoji(priority)} ${priority.charAt(0).toUpperCase() + priority.slice(1)}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Feature:* ${feature}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Assignee:* ${assignee}`
+            }
+          ]
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*Description:*\n${description}`
+          }
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `Created by ${payload.user.username} | ${new Date().toLocaleString()}`
+            }
+          ]
+        },
+        {
+          type: "divider"
+        }
+      ]
+    };
+
+    // Send the message to Slack
+    const slackResponse = await axios.post('https://slack.com/api/chat.postMessage', message, {
+      headers: {
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log('📤 Message sent to Slack:', slackResponse.data);
+    
+    // Save the thread_ts to Firebase for future updates
+    if (slackResponse.data.ok && slackResponse.data.ts) {
+      await db.ref(`issues/${issueId}/slackMetadata`).update({ 
+        messageTs: slackResponse.data.ts 
+      });
+    }
 
     return { statusCode: 200, body: '' };
   } catch (err) {
