@@ -13,7 +13,7 @@ const firebaseConfig = {
     storageBucket: "avada-scrum-9ff0a.firebasestorage.app",
     messagingSenderId: "966424081319",
     appId: "1:966424081319:web:42ad5c6beb8d82f32dbc82",
-    databaseURL: "https://avada-scrum-9ff0a-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    databaseURL: "https://avada-scrum-9ff0a-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 // Initialize Firebase
@@ -35,26 +35,42 @@ enableIndexedDbPersistence(db)
     }
   });
 
+// Hàm để làm sạch đường dẫn Firebase
+const sanitizePath = (path: string): string => {
+  // Loại bỏ các ký tự không hợp lệ trong đường dẫn Firebase
+  return path.replace(/[.#$[\]]/g, '');
+};
+
 // Kiểm tra kết nối với Realtime Database
-const connectedRef = ref(rtdb, '.info/connected');
-onValue(connectedRef, (snap) => {
-  if (snap.val() === true) {
-    console.log('Kết nối với Firebase Realtime Database thành công');
-  } else {
-    console.log('Đã mất kết nối với Firebase Realtime Database');
-  }
-});
+try {
+  const connectedRef = ref(rtdb, '.info/connected');
+  onValue(connectedRef, (snap) => {
+    if (snap.val() === true) {
+      console.log('Kết nối với Firebase Realtime Database thành công');
+    } else {
+      console.log('Đã mất kết nối với Firebase Realtime Database');
+    }
+  }, (error) => {
+    console.error('Lỗi theo dõi kết nối Firebase:', error);
+  });
+} catch (error) {
+  console.error('Lỗi khi tạo reference kết nối:', error);
+}
 
 // Kiểm tra ping ban đầu
-const pingRef = ref(rtdb, '.info/serverTimeOffset');
-get(pingRef).then((snapshot) => {
-  if (snapshot.exists()) {
-    console.log('Firebase ping thành công, offset =', snapshot.val());
-  } else {
-    console.error('Không thể ping Firebase server');
-  }
-}).catch(err => {
-  console.error('Lỗi khi ping Firebase:', err);
-});
+try {
+  const pingRef = ref(rtdb, '.info/serverTimeOffset');
+  get(pingRef).then((snapshot) => {
+    if (snapshot.exists()) {
+      console.log('Firebase ping thành công, offset =', snapshot.val());
+    } else {
+      console.error('Không thể ping Firebase server');
+    }
+  }).catch(err => {
+    console.error('Lỗi khi ping Firebase:', err);
+  });
+} catch (error) {
+  console.error('Lỗi khi tạo reference đến Firebase:', error);
+}
 
-export { db, rtdb }; 
+export { db, rtdb, sanitizePath }; 

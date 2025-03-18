@@ -244,11 +244,11 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issues, onUpdateIssue, onDele
           <div className="issue-title-section">
             <h1>{issue.title}</h1>
             <div className="issue-badges">
-              <span className={`badge-status badge-${issue.status}`}>
-                {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+              <span className={`badge-status badge-${issue.status || 'unknown'}`}>
+                {issue.status ? issue.status.charAt(0).toUpperCase() + issue.status.slice(1) : 'Unknown'}
               </span>
-              <span className={`badge-priority badge-${issue.priority}`}>
-                {issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1)}
+              <span className={`badge-priority badge-${issue.priority || 'unknown'}`}>
+                {issue.priority ? issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1) : 'Unknown'}
               </span>
             </div>
           </div>
@@ -256,21 +256,21 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issues, onUpdateIssue, onDele
           <div className="issue-meta">
             <div className="meta-item">
               <span className="meta-label">Feature:</span>
-              <span className="meta-value">{issue.feature}</span>
+              <span className="meta-value">{issue.feature || 'Unassigned'}</span>
             </div>
             <div className="meta-item">
               <span className="meta-label">Assignee:</span>
-              <span className="meta-value">{issue.assignee}</span>
+              <span className="meta-value">{issue.assignee || 'Unassigned'}</span>
             </div>
             <div className="meta-item">
               <span className="meta-label">Created:</span>
-              <span className="meta-value">{new Date(issue.createdAt).toLocaleDateString()}</span>
+              <span className="meta-value">{issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Unknown'}</span>
             </div>
           </div>
           
           <div className="issue-description">
             <h3>Description</h3>
-            <p>{issue.description}</p>
+            <p>{issue.description || 'No description provided'}</p>
           </div>
           
           <div className="issue-notes">

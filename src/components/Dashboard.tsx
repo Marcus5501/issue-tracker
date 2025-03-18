@@ -320,7 +320,7 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
                 <div key={member} className="workload-item">
                   <div className="member-info">
                     <div className="member-avatar">
-                      {member.charAt(0).toUpperCase()}
+                      {member && member.charAt(0).toUpperCase()}
                     </div>
                     <div className="member-name">{member}</div>
                   </div>
@@ -400,15 +400,15 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
                 <Link to={`/issues/${issue.id}`} key={issue.id} className="recent-issue-card">
                   <div className="issue-header">
                     <h4>{issue.title}</h4>
-                    <span className={`badge-status badge-${issue.status}`}>
-                      {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+                    <span className={`badge-status badge-${issue.status || 'unknown'}`}>
+                      {issue.status && issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
                     </span>
                   </div>
-                  <p className="issue-desc">{issue.description.substring(0, 100)}...</p>
+                  <p className="issue-desc">{issue.description ? issue.description.substring(0, 100) + '...' : 'No description'}</p>
                   <div className="issue-meta">
                     <div className="issue-assignee">
                       <div className="avatar">
-                        {issue.assignee.charAt(0).toUpperCase()}
+                        {issue.assignee && issue.assignee.charAt(0).toUpperCase()}
                       </div>
                       <span>{issue.assignee}</span>
                     </div>

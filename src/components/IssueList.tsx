@@ -128,22 +128,22 @@ const IssueList: React.FC<IssueListProps> = ({
                 </Link>
               </td>
               <td data-label="Status">
-                <span className={`badge-status badge-${issue.status}`}>
-                  {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+                <span className={`badge-status badge-${issue.status || 'unknown'}`}>
+                  {issue.status ? issue.status.charAt(0).toUpperCase() + issue.status.slice(1) : 'Unknown'}
                 </span>
               </td>
               <td data-label="Priority">
-                <span className={`badge-priority badge-${issue.priority}`}>
-                  {issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1)}
+                <span className={`badge-priority badge-${issue.priority || 'unknown'}`}>
+                  {issue.priority ? issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1) : 'Unknown'}
                 </span>
               </td>
-              <td data-label="Feature">{issue.feature}</td>
+              <td data-label="Feature">{issue.feature || 'Unassigned'}</td>
               <td data-label="Assignee">
                 <div className="table-assignee">
                   <div className="avatar">
-                    {issue.assignee.charAt(0).toUpperCase()}
+                    {issue.assignee ? issue.assignee.charAt(0).toUpperCase() : 'U'}
                   </div>
-                  <span>{issue.assignee}</span>
+                  <span>{issue.assignee || 'Unassigned'}</span>
                 </div>
               </td>
               <td data-label="Created">{new Date(issue.createdAt).toLocaleDateString()}</td>
@@ -179,27 +179,27 @@ const IssueList: React.FC<IssueListProps> = ({
             </div>
 
             <div className="issue-badges">
-              <span className={`badge-status badge-${issue.status}`}>
-                {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+              <span className={`badge-status badge-${issue.status || 'unknown'}`}>
+                {issue.status ? issue.status.charAt(0).toUpperCase() + issue.status.slice(1) : 'Unknown'}
               </span>
-              <span className={`badge-priority badge-${issue.priority}`}>
-                {issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1)} Priority
+              <span className={`badge-priority badge-${issue.priority || 'unknown'}`}>
+                {issue.priority ? issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1) : 'Unknown'} Priority
               </span>
             </div>
 
-            <div className="issue-description">{issue.description}</div>
+            <div className="issue-description">{issue.description || 'No description'}</div>
 
             <div className="issue-meta">
               <div className="issue-feature">
                 <span>Feature:</span>
-                <span>{issue.feature}</span>
+                <span>{issue.feature || 'Unassigned'}</span>
               </div>
               <div className="issue-assignee">
                 <span>Assignee:</span>
                 <div className="avatar">
-                  {issue.assignee.charAt(0).toUpperCase()}
+                  {issue.assignee ? issue.assignee.charAt(0).toUpperCase() : 'U'}
                 </div>
-                <span>{issue.assignee}</span>
+                <span>{issue.assignee || 'Unassigned'}</span>
               </div>
               <div className="issue-date">
                 <span>Created:</span>
@@ -245,27 +245,27 @@ const IssueList: React.FC<IssueListProps> = ({
             </div>
 
             <div className="issue-badges">
-              <span className={`badge-status badge-${issue.status}`}>
-                {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+              <span className={`badge-status badge-${issue.status || 'unknown'}`}>
+                {issue.status ? issue.status.charAt(0).toUpperCase() + issue.status.slice(1) : 'Unknown'}
               </span>
-              <span className={`badge-priority badge-${issue.priority}`}>
-                {issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1)} Priority
+              <span className={`badge-priority badge-${issue.priority || 'unknown'}`}>
+                {issue.priority ? issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1) : 'Unknown'} Priority
               </span>
             </div>
 
-            <div className="issue-description">{issue.description}</div>
+            <div className="issue-description">{issue.description || 'No description'}</div>
 
             <div className="issue-meta">
               <div className="issue-feature">
                 <span>Feature:</span>
-                <span>{issue.feature}</span>
+                <span>{issue.feature || 'Unassigned'}</span>
               </div>
               <div className="issue-assignee">
                 <span>Assignee:</span>
                 <div className="avatar">
-                  {issue.assignee.charAt(0).toUpperCase()}
+                  {issue.assignee ? issue.assignee.charAt(0).toUpperCase() : 'U'}
                 </div>
-                <span>{issue.assignee}</span>
+                <span>{issue.assignee || 'Unassigned'}</span>
               </div>
               <div className="issue-date">
                 <span>Created:</span>
