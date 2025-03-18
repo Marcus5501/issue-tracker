@@ -201,6 +201,9 @@ const handler: Handler = async (event) => {
     
     const notes = values.notes?.input?.value || '';
     
+    // Extract followers from the form
+    const followers = values.followers?.input?.value.split(',').map((follower: string) => follower.trim()) || [];
+    
     // Create issue data matching the web app structure
     const issueData = {
       title,
@@ -213,12 +216,13 @@ const handler: Handler = async (event) => {
       assignee,
       assigneeId: assigneeInfo.id, // Save the user ID for future reference
       notes,
+      followers, // Add followers to the issue data
       createdAt: new Date().toISOString(),
       id: Date.now().toString(), // Temporary ID that will be replaced by Firebase's key
       slackMetadata: {
         channelId,
         userId,
-        username
+        username: `@${username}` // Add '@' symbol to the username
       }
     };
 
