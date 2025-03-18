@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Issue } from '../types';
 import { Link } from 'react-router-dom';
 import './Dashboard.css';
+import DashboardCharts from './DashboardCharts';
 
 interface DashboardProps {
   issues: Issue[];
@@ -42,10 +43,12 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
   // Group issues by feature
   const featureCounts: Record<string, number> = {};
   filteredIssues.forEach(issue => {
-    if (featureCounts[issue.feature]) {
-      featureCounts[issue.feature]++;
-    } else {
-      featureCounts[issue.feature] = 1;
+    if (issue.feature) {
+      if (featureCounts[issue.feature]) {
+        featureCounts[issue.feature]++;
+      } else {
+        featureCounts[issue.feature] = 1;
+      }
     }
   });
 
@@ -66,9 +69,8 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
   }> = {};
 
   filteredIssues.forEach(issue => {
-    const assignee = issue.assignee;
+    const assignee = issue.assignee || 'Unassigned';
     
-    // Initialize if first encounter
     if (!teamWorkload[assignee]) {
       teamWorkload[assignee] = {
         total: 0,
@@ -81,7 +83,6 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
       };
     }
     
-    // Update counts
     teamWorkload[assignee].total++;
     teamWorkload[assignee][issue.status]++;
     teamWorkload[assignee][issue.priority]++;
@@ -103,6 +104,19 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
     if (lowerFeature.includes('doc') || lowerFeature.includes('report')) return 'fa-file-lines';
     if (lowerFeature.includes('mobile') || lowerFeature.includes('app')) return 'fa-mobile-screen';
     return 'fa-code-branch';
+  };
+
+  // Get feature color gradients based on feature name
+  const getFeatureColor = (feature: string): [string, string] => {
+    const lowerFeature = feature.toLowerCase();
+    if (lowerFeature.includes('ui') || lowerFeature.includes('interface')) return ['#6366F1', '#8B5CF6']; // Indigo to Purple
+    if (lowerFeature.includes('api') || lowerFeature.includes('backend')) return ['#3B82F6', '#0EA5E9']; // Blue to Sky
+    if (lowerFeature.includes('auth') || lowerFeature.includes('security')) return ['#F59E0B', '#F97316']; // Amber to Orange
+    if (lowerFeature.includes('data') || lowerFeature.includes('database')) return ['#10B981', '#06B6D4']; // Emerald to Cyan
+    if (lowerFeature.includes('test') || lowerFeature.includes('qa')) return ['#8B5CF6', '#EC4899']; // Purple to Pink
+    if (lowerFeature.includes('doc') || lowerFeature.includes('report')) return ['#6366F1', '#2563EB']; // Indigo to Blue
+    if (lowerFeature.includes('mobile') || lowerFeature.includes('app')) return ['#F97316', '#EF4444']; // Orange to Red
+    return ['#4F46E5', '#7C3AED']; // Indigo to Violet (default)
   };
 
   // Format date to be more readable
@@ -200,190 +214,276 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
       </div>
       
       <div className="dashboard-grid">
-        <div className="dashboard-card status-distribution">
-          <h2>Status Distribution</h2>
-          <div className="status-chart">
-            <div className="chart-legend">
-              <div className="legend-item">
-                <span className="legend-color pending"></span>
-                <span className="legend-label">Pending</span>
-                <span className="legend-value">{pendingIssues}</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color doing"></span>
-                <span className="legend-label">In Progress</span>
-                <span className="legend-value">{inProgressIssues}</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color resolved"></span>
-                <span className="legend-label">Resolved</span>
-                <span className="legend-value">{resolvedIssues}</span>
-              </div>
-            </div>
-            <div className="chart-visual">
-              {totalIssues > 0 ? (
-                <>
-                  <div 
-                    className="chart-bar pending" 
-                    style={{ width: `${(pendingIssues / totalIssues) * 100}%` }}
-                    title={`Pending: ${pendingIssues} (${Math.round((pendingIssues / totalIssues) * 100)}%)`}
-                  ></div>
-                  <div 
-                    className="chart-bar doing" 
-                    style={{ width: `${(inProgressIssues / totalIssues) * 100}%` }}
-                    title={`In Progress: ${inProgressIssues} (${Math.round((inProgressIssues / totalIssues) * 100)}%)`}
-                  ></div>
-                  <div 
-                    className="chart-bar resolved" 
-                    style={{ width: `${(resolvedIssues / totalIssues) * 100}%` }}
-                    title={`Resolved: ${resolvedIssues} (${Math.round((resolvedIssues / totalIssues) * 100)}%)`}
-                  ></div>
-                </>
-              ) : (
-                <div className="no-data-chart">No data available</div>
-              )}
-            </div>
-          </div>
+        <div className="dashboard-card-modern" style={{width: '100%', gridColumn: '1 / -1'}}>
+          <DashboardCharts 
+            pendingIssues={pendingIssues}
+            inProgressIssues={inProgressIssues}
+            resolvedIssues={resolvedIssues}
+            highPriorityIssues={highPriorityIssues}
+            mediumPriorityIssues={mediumPriorityIssues}
+            lowPriorityIssues={lowPriorityIssues}
+          />
+        </div>
+        
+        <div className="dashboard-card features-distribution" style={{
+          gridColumn: 'span 6',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '32px',
+          backgroundColor: 'white',
+          borderRadius: '24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+          gap: '24px'
+        }}>
+          <h2 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700', 
+            color: '#1a1a1a',
+            position: 'relative',
+            display: 'inline-block',
+            marginBottom: '8px'
+          }}>
+            Issues by Feature
+            <div style={{ 
+              position: 'absolute', 
+              bottom: '-8px', 
+              left: '0', 
+              width: '48px', 
+              height: '4px', 
+              background: 'linear-gradient(90deg, #6366F1, #8B5CF6)', 
+              borderRadius: '2px' 
+            }}></div>
+          </h2>
           
-          <h3>Priority Breakdown</h3>
-          <div className="priority-chart">
-            <div className="chart-legend">
-              <div className="legend-item">
-                <span className="legend-color high"></span>
-                <span className="legend-label">High</span>
-                <span className="legend-value">{highPriorityIssues}</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color medium"></span>
-                <span className="legend-label">Medium</span>
-                <span className="legend-value">{mediumPriorityIssues}</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-color low"></span>
-                <span className="legend-label">Low</span>
-                <span className="legend-value">{lowPriorityIssues}</span>
-              </div>
-            </div>
-            <div className="chart-visual">
-              {totalIssues > 0 ? (
-                <>
-                  <div 
-                    className="chart-bar high" 
-                    style={{ width: `${(highPriorityIssues / totalIssues) * 100}%` }}
-                    title={`High: ${highPriorityIssues} (${Math.round((highPriorityIssues / totalIssues) * 100)}%)`}
-                  ></div>
-                  <div 
-                    className="chart-bar medium" 
-                    style={{ width: `${(mediumPriorityIssues / totalIssues) * 100}%` }}
-                    title={`Medium: ${mediumPriorityIssues} (${Math.round((mediumPriorityIssues / totalIssues) * 100)}%)`}
-                  ></div>
-                  <div 
-                    className="chart-bar low" 
-                    style={{ width: `${(lowPriorityIssues / totalIssues) * 100}%` }}
-                    title={`Low: ${lowPriorityIssues} (${Math.round((lowPriorityIssues / totalIssues) * 100)}%)`}
-                  ></div>
-                </>
-              ) : (
-                <div className="no-data-chart">No data available</div>
-              )}
-            </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '16px',
+            width: '100%'
+          }}>
+            {Object.entries(featureCounts).map(([feature, count]) => {
+              const [gradientStart, gradientEnd] = getFeatureColor(feature);
+              return (
+                <div key={feature} className="feature-card" style={{
+                  padding: '20px',
+                  borderRadius: '16px',
+                  background: '#fff',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer'
+                }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <i className={`fas ${getFeatureIcon(feature)}`} style={{ color: '#fff', fontSize: '20px' }}></i>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ 
+                      fontSize: '16px', 
+                      fontWeight: '600', 
+                      color: '#1a1a1a',
+                      marginBottom: '4px'
+                    }}>{feature}</h3>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      color: '#666',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span style={{ fontWeight: '600', color: '#1a1a1a' }}>{count}</span> issues
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
         
-        <div className="dashboard-card feature-distribution">
-          <h2>Issues by Feature</h2>
-          <div className="features-grid">
-            {Object.entries(featureCounts)
-              .sort((a, b) => b[1] - a[1])
-              .map(([feature, count]) => (
-                <div key={feature} className="feature-card">
-                  <div className="feature-icon">
-                    <i className={`fas ${getFeatureIcon(feature)}`}></i>
+        <div className="dashboard-card team-workload" style={{
+          gridColumn: 'span 6',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '32px',
+          backgroundColor: 'white',
+          borderRadius: '24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+          gap: '24px'
+        }}>
+          <h2 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700', 
+            color: '#1a1a1a',
+            position: 'relative',
+            display: 'inline-block',
+            marginBottom: '8px'
+          }}>
+            Team Workload
+            <div style={{ 
+              position: 'absolute', 
+              bottom: '-8px', 
+              left: '0', 
+              width: '48px', 
+              height: '4px', 
+              background: 'linear-gradient(90deg, #F97316, #EF4444)', 
+              borderRadius: '2px' 
+            }}></div>
+          </h2>
+
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            {sortedTeamMembers.map(member => {
+              const workload = teamWorkload[member];
+              const totalIssues = workload.total;
+              const completionRate = Math.round((workload.resolved / totalIssues) * 100) || 0;
+              
+              return (
+                <div key={member} style={{
+                  padding: '20px',
+                  borderRadius: '16px',
+                  background: '#fff',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: `linear-gradient(135deg, #F97316, #EF4444)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '16px',
+                        fontWeight: '600'
+                      }}>
+                        {member[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 style={{ 
+                          fontSize: '16px', 
+                          fontWeight: '600', 
+                          color: '#1a1a1a' 
+                        }}>{member}</h3>
+                        <p style={{ 
+                          fontSize: '14px', 
+                          color: '#666' 
+                        }}>{totalIssues} total issues</p>
+                      </div>
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <div style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        background: workload.high > 0 ? '#FEE2E2' : '#F3F4F6',
+                        color: workload.high > 0 ? '#EF4444' : '#6B7280',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}>
+                        {workload.high} High Priority
+                      </div>
+                      <div style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        background: '#F0FDF4',
+                        color: '#22C55E',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}>
+                        {completionRate}% Complete
+                      </div>
+                    </div>
                   </div>
-                  <div className="feature-content">
-                    <h4>{feature}</h4>
-                    <p className="feature-count">{count} {count === 1 ? 'issue' : 'issues'}</p>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '12px'
+                  }}>
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#FFF7ED',
+                      textAlign: 'center'
+                    }}>
+                      <p style={{ 
+                        fontSize: '12px', 
+                        color: '#C2410C',
+                        marginBottom: '4px'
+                      }}>Pending</p>
+                      <p style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '600',
+                        color: '#EA580C'
+                      }}>{workload.pending}</p>
+                    </div>
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#EFF6FF',
+                      textAlign: 'center'
+                    }}>
+                      <p style={{ 
+                        fontSize: '12px', 
+                        color: '#1D4ED8',
+                        marginBottom: '4px'
+                      }}>In Progress</p>
+                      <p style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '600',
+                        color: '#2563EB'
+                      }}>{workload.doing}</p>
+                    </div>
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#F0FDF4',
+                      textAlign: 'center'
+                    }}>
+                      <p style={{ 
+                        fontSize: '12px', 
+                        color: '#15803D',
+                        marginBottom: '4px'
+                      }}>Resolved</p>
+                      <p style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '600',
+                        color: '#16A34A'
+                      }}>{workload.resolved}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            {Object.keys(featureCounts).length === 0 && (
-              <div className="no-data">No feature data available</div>
-            )}
+              );
+            })}
           </div>
-        </div>
-        
-        <div className="dashboard-card team-workload">
-          <h2>Team Workload</h2>
-          {sortedTeamMembers.length > 0 ? (
-            <div className="workload-list">
-              {sortedTeamMembers.map(member => (
-                <div key={member} className="workload-item">
-                  <div className="member-info">
-                    <div className="member-avatar">
-                      {member && member.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="member-name">{member}</div>
-                  </div>
-                  
-                  <div className="workload-stats">
-                    <div className="workload-total">
-                      <span className="workload-number">{teamWorkload[member].total}</span>
-                      <span className="workload-label">Total Issues</span>
-                    </div>
-                    
-                    <div className="workload-breakdown">
-                      <div className="workload-bar-container" aria-label="Status distribution">
-                        {teamWorkload[member].pending > 0 && (
-                          <div 
-                            className="workload-bar pending" 
-                            style={{ 
-                              width: `${(teamWorkload[member].pending / teamWorkload[member].total) * 100}%` 
-                            }}
-                            title={`Pending: ${teamWorkload[member].pending}`}
-                          ></div>
-                        )}
-                        {teamWorkload[member].doing > 0 && (
-                          <div 
-                            className="workload-bar doing" 
-                            style={{ 
-                              width: `${(teamWorkload[member].doing / teamWorkload[member].total) * 100}%` 
-                            }}
-                            title={`In Progress: ${teamWorkload[member].doing}`}
-                          ></div>
-                        )}
-                        {teamWorkload[member].resolved > 0 && (
-                          <div 
-                            className="workload-bar resolved" 
-                            style={{ 
-                              width: `${(teamWorkload[member].resolved / teamWorkload[member].total) * 100}%` 
-                            }}
-                            title={`Resolved: ${teamWorkload[member].resolved}`}
-                          ></div>
-                        )}
-                      </div>
-                      
-                      <div className="workload-numbers">
-                        <span className="workload-number high" title="High Priority">
-                          {teamWorkload[member].high}
-                          <span className="priority-label">High</span>
-                        </span>
-                        <span className="workload-number medium" title="Medium Priority">
-                          {teamWorkload[member].medium}
-                          <span className="priority-label">Med</span>
-                        </span>
-                        <span className="workload-number low" title="Low Priority">
-                          {teamWorkload[member].low}
-                          <span className="priority-label">Low</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="no-data">No team workload data available</div>
-          )}
         </div>
         
         <div className="dashboard-card recent-activity">
@@ -429,3 +529,15 @@ const Dashboard: React.FC<DashboardProps> = ({ issues }) => {
 };
 
 export default Dashboard; 
+
+<style>
+  {`
+    .feature-card {
+      transform: translateY(0);
+    }
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+  `}
+</style> 
