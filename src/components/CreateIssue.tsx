@@ -210,14 +210,19 @@ const CreateIssue: React.FC<CreateIssueProps> = ({ onCreateIssue }) => {
           
           <div className="form-group">
             <label htmlFor="assignee">Assignee *</label>
-            <input
-              type="text"
+            <select
               id="assignee"
               name="assignee"
               value={newIssue.assignee}
               onChange={handleInputChange}
+              multiple
               required
-            />
+            >
+              {/* Assuming a list of team members is available */}
+              {['John Doe', 'Jane Smith', 'Mike Johnson'].map(member => (
+                <option key={member} value={member}>{member}</option>
+              ))}
+            </select>
           </div>
         </div>
         
