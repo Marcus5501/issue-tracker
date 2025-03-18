@@ -223,6 +223,19 @@ const handler: Handler = async (event) => {
                 }
               },
               {
+                type: "section",
+                fields: [
+                  {
+                    type: "mrkdwn",
+                    text: `*Shop URL:* ${issue.shopUrl === 'No shop URL provided' ? issue.shopUrl : `<${issue.shopUrl}|Shop Link>`}`
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: `*Chat URL:* ${issue.chatUrl === 'No chat URL provided' ? issue.chatUrl : `<${issue.chatUrl}|Chat Link>`}`
+                  }
+                ]
+              },
+              {
                 type: "context",
                 elements: [
                   {
@@ -255,6 +268,19 @@ const handler: Handler = async (event) => {
                     ? `Issue "*${issue.title}*" is now being worked on${assigneeMention ? ` by ${assigneeMention}` : ''}.`
                     : `Issue "*${issue.title}*" status has been updated.${assigneeMention ? ` CC: ${assigneeMention}` : ''}`
                 }
+              },
+              {
+                type: "section",
+                fields: [
+                  {
+                    type: "mrkdwn",
+                    text: `*Shop URL:* ${issue.shopUrl === 'No shop URL provided' ? issue.shopUrl : `<${issue.shopUrl}|Shop Link>`}`
+                  },
+                  {
+                    type: "mrkdwn",
+                    text: `*Chat URL:* ${issue.chatUrl === 'No chat URL provided' ? issue.chatUrl : `<${issue.chatUrl}|Chat Link>`}`
+                  }
+                ]
               },
               {
                 type: "context",

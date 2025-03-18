@@ -8,4 +8,6 @@ export interface Issue {
   assignee: string;
   createdAt: string;
   notes?: string;
+  shopUrl?: string;
+  chatUrl?: string;
 } 

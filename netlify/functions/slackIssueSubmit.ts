@@ -191,6 +191,8 @@ const handler: Handler = async (event) => {
     const status = values.status?.input?.selected_option?.value || 'pending';
     const priority = values.priority?.input?.selected_option?.value || 'medium';
     const feature = values.feature?.input?.selected_option?.value || 'Unspecified';
+    const shopUrl = values.shop_url?.input?.value || 'No shop URL provided';
+    const chatUrl = values.chat_url?.input?.value || 'No chat URL provided';
     
     // Handle assignee from users_select
     const assigneeId = values.assignee?.input?.selected_user || 'Unassigned';
@@ -206,6 +208,8 @@ const handler: Handler = async (event) => {
       status,
       priority,
       feature,
+      shopUrl,
+      chatUrl,
       assignee,
       assigneeId: assigneeInfo.id, // Save the user ID for future reference
       notes,
@@ -234,13 +238,13 @@ const handler: Handler = async (event) => {
     // Send a message to the Slack channel with issue details
     const message = {
       channel: channelId,
-      text: `*New Issue Created:* #${issueId}`,
+      text: `*New Issue Created:*`,
       blocks: [
         {
           type: "header",
           text: {
             type: "plain_text",
-            text: `🔔 New Issue #${issueId}`,
+            text: `🔔 New Issue`,
             emoji: true
           }
         },
@@ -250,6 +254,9 @@ const handler: Handler = async (event) => {
             type: "mrkdwn",
             text: `*${title}*`
           }
+        },
+        {
+          type: "divider"
         },
         {
           type: "section",
@@ -276,8 +283,25 @@ const handler: Handler = async (event) => {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*Description:*\n${description}`
+            text: `*Description:*
+${description}`
           }
+        },
+        {
+          type: "divider"
+        },
+        {
+          type: "section",
+          fields: [
+            {
+              type: "mrkdwn",
+              text: `*Shop URL:* ${shopUrl === 'No shop URL provided' ? shopUrl : `<${shopUrl}|Shop Link>`}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Chat URL:* ${chatUrl === 'No chat URL provided' ? chatUrl : `<${chatUrl}|Chat Link>`}`
+            }
+          ]
         },
         {
           type: "context",

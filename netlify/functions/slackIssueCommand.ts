@@ -94,14 +94,52 @@ const handler: Handler = async (event) => {
         },
         {
           type: 'input',
-          block_id: 'description',
-          element: { 
-            type: 'plain_text_input', 
-            action_id: 'input', 
-            multiline: true,
-            placeholder: { type: 'plain_text', text: 'Describe the issue in detail' }
+          block_id: 'shop_url',
+          element: {
+            type: 'plain_text_input',
+            action_id: 'input',
+            placeholder: {
+              type: 'plain_text',
+              text: 'Enter shop URL'
+            }
           },
-          label: { type: 'plain_text', text: 'Description *' }
+          label: {
+            type: 'plain_text',
+            text: 'Shop URL'
+          }
+        },
+        {
+          type: 'input',
+          block_id: 'chat_url',
+          element: {
+            type: 'plain_text_input',
+            action_id: 'input',
+            placeholder: {
+              type: 'plain_text',
+              text: 'Enter chat URL'
+            }
+          },
+          label: {
+            type: 'plain_text',
+            text: 'Chat URL'
+          }
+        },
+        {
+          type: 'input',
+          block_id: 'description',
+          element: {
+            type: 'plain_text_input',
+            action_id: 'input',
+            multiline: true,
+            placeholder: {
+              type: 'plain_text',
+              text: 'Enter description'
+            }
+          },
+          label: {
+            type: 'plain_text',
+            text: 'Description'
+          }
         },
         {
           type: 'input',

@@ -35,7 +35,9 @@ const CreateIssue: React.FC<CreateIssueProps> = ({ onCreateIssue }) => {
     priority: 'medium',
     feature: COMMON_FEATURES[0], // Mặc định chọn tính năng đầu tiên
     assignee: '',
-    notes: ''
+    notes: '',
+    shopUrl: '',
+    chatUrl: ''
   });
   const [customFeature, setCustomFeature] = useState<string>('');
   const [showCustomFeature, setShowCustomFeature] = useState<boolean>(false);
@@ -124,6 +126,28 @@ const CreateIssue: React.FC<CreateIssueProps> = ({ onCreateIssue }) => {
             value={newIssue.description}
             onChange={handleInputChange}
             required
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="shopUrl">Shop URL</label>
+          <input
+            type="url"
+            id="shopUrl"
+            name="shopUrl"
+            value={newIssue.shopUrl}
+            onChange={handleInputChange}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="chatUrl">Chat URL</label>
+          <input
+            type="url"
+            id="chatUrl"
+            name="chatUrl"
+            value={newIssue.chatUrl}
+            onChange={handleInputChange}
           />
         </div>
         
