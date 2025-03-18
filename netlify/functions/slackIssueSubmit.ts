@@ -26,6 +26,40 @@ const formatPriorityEmoji = (priority: string): string => {
   }
 };
 
+// Helper function to try joining a channel before posting
+const tryJoinChannel = async (channelId: string): Promise<boolean> => {
+  try {
+    console.log(`Attempting to join channel: ${channelId}`);
+    
+    // Try to join the channel using conversations.join API
+    const joinResponse = await axios.post('https://slack.com/api/conversations.join', 
+      { channel: channelId }, 
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Channel join attempt result:', joinResponse.data);
+    
+    if (joinResponse.data.ok) {
+      console.log('✅ Successfully joined channel!');
+      return true;
+    } else {
+      console.error(`❌ Could not join channel: ${joinResponse.data.error}`);
+      if (joinResponse.data.error === 'method_not_allowed_for_channel_type') {
+        console.error('This might be a private channel or DM. Bot must be invited manually.');
+      }
+      return false;
+    }
+  } catch (error) {
+    console.error('Error joining channel:', error);
+    return false;
+  }
+};
+
 const formatStatusEmoji = (status: string): string => {
   switch (status) {
     case 'pending': return '⏱️';
@@ -72,6 +106,37 @@ const extractUserInfo = (payload: any) => {
   }
 };
 
+// Helper function to get user info from Slack API
+const getUserInfo = async (userId: string): Promise<{ id: string, name: string, real_name?: string }> => {
+  try {
+    // Skip API call if no valid userId
+    if (!userId || userId === 'Unassigned') {
+      return { id: 'Unassigned', name: 'Unassigned' };
+    }
+    
+    // Call Slack API to get user info
+    const response = await axios.get(`https://slack.com/api/users.info?user=${userId}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`
+      }
+    });
+    
+    if (response.data.ok && response.data.user) {
+      return {
+        id: response.data.user.id,
+        name: response.data.user.name,
+        real_name: response.data.user.real_name || response.data.user.name
+      };
+    } else {
+      console.error('Failed to get user info:', response.data.error);
+      return { id: userId, name: 'Unknown User' };
+    }
+  } catch (error) {
+    console.error('Error fetching user info:', error);
+    return { id: userId, name: 'Unknown User' };
+  }
+};
+
 const handler: Handler = async (event) => {
   try {
     // Parse x-www-form-urlencoded
@@ -92,7 +157,12 @@ const handler: Handler = async (event) => {
     const status = values.status?.input?.selected_option?.value || 'pending';
     const priority = values.priority?.input?.selected_option?.value || 'medium';
     const feature = values.feature?.input?.selected_option?.value || 'Unspecified';
-    const assignee = values.assignee?.input?.value || 'Unassigned';
+    
+    // Handle assignee from users_select
+    const assigneeId = values.assignee?.input?.selected_user || 'Unassigned';
+    const assigneeInfo = await getUserInfo(assigneeId);
+    const assignee = assigneeInfo.real_name || assigneeInfo.name;
+    
     const notes = values.notes?.input?.value || '';
     
     // Create issue data matching the web app structure
@@ -103,6 +173,7 @@ const handler: Handler = async (event) => {
       priority,
       feature,
       assignee,
+      assigneeId: assigneeInfo.id, // Save the user ID for future reference
       notes,
       createdAt: new Date().toISOString(),
       id: Date.now().toString(), // Temporary ID that will be replaced by Firebase's key
@@ -163,7 +234,7 @@ const handler: Handler = async (event) => {
             },
             {
               type: "mrkdwn",
-              text: `*Assignee:* ${assignee}`
+              text: `*Assignee:* ${assigneeId !== 'Unassigned' ? `<@${assigneeId}>` : 'Unassigned'}`
             }
           ]
         },
@@ -189,6 +260,9 @@ const handler: Handler = async (event) => {
       ]
     };
 
+    // Try to join the channel before sending the message
+    await tryJoinChannel(channelId);
+
     // Send the message to Slack
     const slackResponse = await axios.post('https://slack.com/api/chat.postMessage', message, {
       headers: {
@@ -198,8 +272,17 @@ const handler: Handler = async (event) => {
     });
 
     console.log('📤 Message sent to Slack:', slackResponse.data);
-    
-    // Save the thread_ts to Firebase for future updates
+
+    // Check if there was a channel permission error
+    if (slackResponse.data.error === 'not_in_channel') {
+      console.error('⚠️ BOT KHÔNG Ở TRONG CHANNEL! Vui lòng thêm bot vào channel bằng cách thực hiện:');
+      console.error(`1. Mở Slack và vào channel "${channelId}"`);
+      console.error('2. Gõ "@[tên bot của bạn]" trong chat');
+      console.error('3. Khi hiện lên thông tin bot, nhấp vào "Add to Channel"');
+      console.error('4. Thử lại lệnh issue sau khi đã thêm bot vào channel');
+    }
+
+    // Save the thread_ts to Firebase for future updates if successful
     if (slackResponse.data.ok && slackResponse.data.ts) {
       await db.ref(`issues/${issueId}/slackMetadata`).update({ 
         messageTs: slackResponse.data.ts 

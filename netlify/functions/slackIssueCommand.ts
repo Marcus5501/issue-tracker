@@ -128,9 +128,9 @@ const handler: Handler = async (event) => {
           type: 'input',
           block_id: 'assignee',
           element: { 
-            type: 'plain_text_input', 
+            type: 'users_select', 
             action_id: 'input',
-            placeholder: { type: 'plain_text', text: 'Who should work on this issue?' }
+            placeholder: { type: 'plain_text', text: 'Ai sẽ xử lý issue này?' }
           },
           label: { type: 'plain_text', text: 'Assignee *' }
         },
@@ -152,6 +152,18 @@ const handler: Handler = async (event) => {
 
   try {
     await axios.post('https://slack.com/api/views.open', modalView, {
+      headers: {
+        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    // Send a message to remind users to add the bot to the channel
+    await axios.post('https://slack.com/api/chat.postEphemeral', {
+      channel: channel_id,
+      user: bodyParams.get('user_id'),
+      text: "👋 *Lưu ý:* Để bot có thể gửi thông báo về issue, vui lòng đảm bảo đã *thêm bot vào channel này* nếu chưa làm điều đó. Bạn có thể thêm bot bằng cách gõ `@[tên bot]` và chọn 'Add to Channel'."
+    }, {
       headers: {
         Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
         'Content-Type': 'application/json'

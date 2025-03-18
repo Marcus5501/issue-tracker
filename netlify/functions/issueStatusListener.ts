@@ -32,6 +32,40 @@ const formatStatusEmoji = (status: string): string => {
   }
 };
 
+// Helper function to try joining a channel before posting
+const tryJoinChannel = async (channelId: string): Promise<boolean> => {
+  try {
+    console.log(`Attempting to join channel: ${channelId}`);
+    
+    // Try to join the channel using conversations.join API
+    const joinResponse = await axios.post('https://slack.com/api/conversations.join', 
+      { channel: channelId }, 
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Channel join attempt result:', joinResponse.data);
+    
+    if (joinResponse.data.ok) {
+      console.log('✅ Successfully joined channel!');
+      return true;
+    } else {
+      console.error(`❌ Could not join channel: ${joinResponse.data.error}`);
+      if (joinResponse.data.error === 'method_not_allowed_for_channel_type') {
+        console.error('This might be a private channel or DM. Bot must be invited manually.');
+      }
+      return false;
+    }
+  } catch (error) {
+    console.error('Error joining channel:', error);
+    return false;
+  }
+};
+
 // Helper function to send message to Slack
 const sendSlackMessage = async (message: any) => {
   try {
@@ -49,6 +83,9 @@ const sendSlackMessage = async (message: any) => {
       throw new Error(`Slack auth test failed: ${authTestResponse.data.error}`);
     }
     
+    // Try to join the channel before sending the message
+    await tryJoinChannel(message.channel);
+    
     // If auth test passes, send the actual message
     const slackResponse = await axios.post('https://slack.com/api/chat.postMessage', message, {
       headers: {
@@ -58,6 +95,22 @@ const sendSlackMessage = async (message: any) => {
     });
     
     console.log('📤 Message sent to Slack:', slackResponse.data);
+    
+    // Check for specific errors and provide helpful instructions
+    if (!slackResponse.data.ok) {
+      if (slackResponse.data.error === 'not_in_channel') {
+        console.error('⚠️ BOT KHÔNG Ở TRONG CHANNEL! Vui lòng thêm bot vào channel bằng cách thực hiện:');
+        console.error(`1. Mở Slack và vào channel "${message.channel}"`);
+        console.error('2. Gõ "@[tên bot của bạn]" trong chat');
+        console.error('3. Khi hiện lên thông tin bot, nhấp vào "Add to Channel"');
+        console.error('4. Các notification sẽ hoạt động sau khi đã thêm bot vào channel');
+      } else if (slackResponse.data.error === 'channel_not_found') {
+        console.error(`⚠️ KHÔNG TÌM THẤY CHANNEL: "${message.channel}". Vui lòng kiểm tra ID channel.`);
+      } else {
+        console.error(`⚠️ LỖI SLACK API: ${slackResponse.data.error}`);
+      }
+    }
+    
     return slackResponse.data;
   } catch (error) {
     console.error('Error sending message to Slack:', error);
@@ -110,6 +163,11 @@ const handler: Handler = async (event) => {
       if (oldStatus !== newStatus) {
         let statusChangeMessage;
         
+        // Create mention for assignee if available
+        const assigneeMention = issue.assigneeId && issue.assigneeId !== 'Unassigned' 
+          ? `<@${issue.assigneeId}>` 
+          : '';
+        
         if (newStatus === 'resolved') {
           statusChangeMessage = {
             channel: channelId,
@@ -127,7 +185,7 @@ const handler: Handler = async (event) => {
                 type: "section",
                 text: {
                   type: "mrkdwn",
-                  text: `*${issue.title}* has been marked as resolved.`
+                  text: `*${issue.title}* has been marked as resolved.${assigneeMention ? ` Great job ${assigneeMention}!` : ''}`
                 }
               },
               {
@@ -153,6 +211,15 @@ const handler: Handler = async (event) => {
                 text: {
                   type: "mrkdwn",
                   text: `${formatStatusEmoji(newStatus)} *Status updated:* ${oldStatus} → ${newStatus}`
+                }
+              },
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: newStatus === 'doing' 
+                    ? `Issue "*${issue.title}*" is now being worked on${assigneeMention ? ` by ${assigneeMention}` : ''}.`
+                    : `Issue "*${issue.title}*" status has been updated.${assigneeMention ? ` CC: ${assigneeMention}` : ''}`
                 }
               },
               {
